@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/bagasss3/toko/pb/auth"
 	"github.com/bagasss3/toko/services/auth-service/internal/model"
+	pb "github.com/bagasss3/toko/services/auth-service/pb/auth"
 )
 
 type AuthGRPCHandler struct {
@@ -24,7 +24,7 @@ func (h *AuthGRPCHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.
 	tokens, err := h.authUsecase.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		log.WithError(err).Error("login failed")
-		return nil, status.Errorf(codes.Unauthenticated, err.Error())
+		return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
 	}
 
 	return &pb.LoginResponse{
@@ -36,7 +36,7 @@ func (h *AuthGRPCHandler) Register(ctx context.Context, req *pb.RegisterRequest)
 	user, err := h.authUsecase.Register(ctx, req.Email, req.Password)
 	if err != nil {
 		log.WithError(err).Error("register failed")
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
 	return &pb.RegisterResponse{
@@ -49,7 +49,7 @@ func (h *AuthGRPCHandler) ValidateToken(ctx context.Context, req *pb.ValidateTok
 	claims, err := h.authUsecase.ValidateToken(ctx, req.Token)
 	if err != nil {
 		log.WithError(err).Error("validate token failed")
-		return nil, status.Errorf(codes.Unauthenticated, err.Error())
+		return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
 	}
 
 	return &pb.ValidateTokenResponse{

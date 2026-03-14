@@ -13,7 +13,7 @@ import (
 	pkgconfig "github.com/bagasss3/toko/packages/config"
 	"github.com/bagasss3/toko/packages/database"
 	"github.com/bagasss3/toko/packages/logger"
-	pb "github.com/bagasss3/toko/pb/auth"
+	pb "github.com/bagasss3/toko/services/auth-service/pb/auth"
 
 	"github.com/bagasss3/toko/services/auth-service/internal/config"
 	grpchandler "github.com/bagasss3/toko/services/auth-service/internal/delivery/handler"

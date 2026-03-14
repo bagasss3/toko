@@ -1,6 +1,6 @@
 syntax = "proto3";
 package auth;
-option go_package = "github.com/bagasss3/toko/pb/auth";
+option go_package = "github.com/bagasss3/toko/services/auth-service/pb/auth";
 
 service AuthService {
     rpc Login(LoginRequest)       returns (LoginResponse);

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"aidanwoods.dev/go-paseto"
@@ -16,10 +17,10 @@ var (
 )
 
 type Claims struct {
-	UserID    int64     `json:"user_id"`
-	Email     string    `json:"email"`
-	IssuedAt  time.Time `json:"issued_at"`
-	ExpiredAt time.Time `json:"expired_at"`
+	UserID    int64
+	Email     string
+	IssuedAt  time.Time
+	ExpiredAt time.Time
 }
 
 type Maker struct {
@@ -33,7 +34,7 @@ func NewMaker(symmetricKey string) (*Maker, error) {
 
 	key, err := paseto.V4SymmetricKeyFromBytes([]byte(symmetricKey))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating symmetric key: %w", err)
 	}
 
 	return &Maker{symmetricKey: key}, nil
@@ -47,14 +48,14 @@ func (m *Maker) CreateToken(userID int64, email string, duration time.Duration) 
 		ExpiredAt: time.Now().Add(duration),
 	}
 
-	token := paseto.NewToken()
-	token.SetJti(uuid.New().String())
-	token.SetIssuedAt(claims.IssuedAt)
-	token.SetExpiration(claims.ExpiredAt)
-	token.SetString("user_id", fmt.Sprintf("%d", userID))
-	token.SetString("email", email)
+	t := paseto.NewToken()
+	t.SetJti(uuid.New().String())
+	t.SetIssuedAt(claims.IssuedAt)
+	t.SetExpiration(claims.ExpiredAt)
+	t.SetString("user_id", strconv.FormatInt(userID, 10))
+	t.SetString("email", email)
 
-	encrypted := token.V4Encrypt(m.symmetricKey, nil)
+	encrypted := t.V4Encrypt(m.symmetricKey, nil)
 	return encrypted, claims, nil
 }
 
@@ -62,16 +63,16 @@ func (m *Maker) VerifyToken(tokenStr string) (*Claims, error) {
 	parser := paseto.NewParser()
 	parser.AddRule(paseto.NotExpired())
 
-	token, err := parser.ParseV4Local(m.symmetricKey, tokenStr, nil)
+	t, err := parser.ParseV4Local(m.symmetricKey, tokenStr, nil)
 	if err != nil {
-		if errors.Is(err, paseto.ErrTokenExpired) {
+		if strings.Contains(err.Error(), "token has expired") {
 			return nil, ErrExpiredToken
 		}
 		return nil, ErrInvalidToken
 	}
 
-	var userIDStr string
-	if err := token.Get("user_id", &userIDStr); err != nil {
+	userIDStr, err := t.GetString("user_id")
+	if err != nil {
 		return nil, ErrInvalidToken
 	}
 
@@ -80,15 +81,25 @@ func (m *Maker) VerifyToken(tokenStr string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	var email string
-	if err := token.Get("email", &email); err != nil {
+	email, err := t.GetString("email")
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	issuedAt, err := t.GetIssuedAt()
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	expiredAt, err := t.GetExpiration()
+	if err != nil {
 		return nil, ErrInvalidToken
 	}
 
 	return &Claims{
 		UserID:    userID,
 		Email:     email,
-		IssuedAt:  token.GetIssuedAt(),
-		ExpiredAt: token.GetExpiration(),
+		IssuedAt:  issuedAt,
+		ExpiredAt: expiredAt,
 	}, nil
 }
