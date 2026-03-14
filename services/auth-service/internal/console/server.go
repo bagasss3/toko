@@ -2,20 +2,29 @@ package console
 
 import (
 	"fmt"
+	"net"
 	"time"
+
+	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/bagasss3/toko/packages/cache"
 	pkgconfig "github.com/bagasss3/toko/packages/config"
 	"github.com/bagasss3/toko/packages/database"
 	"github.com/bagasss3/toko/packages/logger"
-	"github.com/spf13/cobra"
+	pb "github.com/bagasss3/toko/pb/auth"
 
 	"github.com/bagasss3/toko/services/auth-service/internal/config"
+	grpchandler "github.com/bagasss3/toko/services/auth-service/internal/delivery/handler"
+	"github.com/bagasss3/toko/services/auth-service/internal/helper/token"
+	"github.com/bagasss3/toko/services/auth-service/internal/repository"
+	"github.com/bagasss3/toko/services/auth-service/internal/usecase"
 )
 
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "Start HTTP server",
+	Short: "Start gRPC server",
 	Run:   runServer,
 }
 
@@ -39,14 +48,37 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
-	_ = cache.NewKeeper(cache.Config{
+	keeper := cache.NewKeeper(cache.Config{
 		Host:       cfg.RedisHost,
 		Password:   cfg.RedisPassword,
 		DB:         cfg.RedisDB,
-		DefaultTTL: 15 * time.Minute,
+		DefaultTTL: cfg.RedisExpired,
 		MaxIdle:    100,
 		MaxActive:  10000,
 	})
 
-	log.Infof("starting on port %s", cfg.Port)
+	tokenMaker, err := token.NewMaker(cfg.PasetoKey)
+	if err != nil {
+		log.WithError(err).Fatal("failed to create token maker")
+	}
+
+	// wire — bottom up
+	userRepo := repository.NewUserRepository(db, keeper, cfg.RedisExpired)
+	authUsecase := usecase.NewAuthUsecase(userRepo, tokenMaker, cfg)
+	authHandler := grpchandler.NewAuthGRPCHandler(authUsecase)
+
+	// start gRPC server
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
+	if err != nil {
+		log.WithError(err).Fatal("failed to listen")
+	}
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterAuthServiceServer(grpcServer, authHandler)
+	reflection.Register(grpcServer)
+
+	log.Infof("auth-service gRPC listening on :%s", cfg.Port)
+	if err := grpcServer.Serve(lis); err != nil {
+		log.WithError(err).Fatal("gRPC server failed")
+	}
 }

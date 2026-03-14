@@ -1,0 +1,38 @@
+syntax = "proto3";
+package auth;
+option go_package = "github.com/bagasss3/toko/pb/auth";
+
+service AuthService {
+    rpc Login(LoginRequest)       returns (LoginResponse);
+    rpc Register(RegisterRequest) returns (RegisterResponse);
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message LoginRequest {
+    string email    = 1;
+    string password = 2;
+}
+
+message LoginResponse {
+    string access_token  = 1;
+    string refresh_token = 2;
+}
+
+message RegisterRequest {
+    string email    = 1;
+    string password = 2;
+}
+
+message RegisterResponse {
+    int64  id    = 1;
+    string email = 2;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    int64  user_id = 1;
+    string email   = 2;
+}
