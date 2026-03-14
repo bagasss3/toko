@@ -3,6 +3,9 @@ package console
 import (
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -62,12 +65,10 @@ func runServer(cmd *cobra.Command, args []string) {
 		log.WithError(err).Fatal("failed to create token maker")
 	}
 
-	// wire — bottom up
 	userRepo := repository.NewUserRepository(db, keeper, cfg.RedisExpired)
 	authUsecase := usecase.NewAuthUsecase(userRepo, tokenMaker, cfg)
 	authHandler := grpchandler.NewAuthGRPCHandler(authUsecase)
 
-	// start gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 	if err != nil {
 		log.WithError(err).Fatal("failed to listen")
@@ -77,8 +78,32 @@ func runServer(cmd *cobra.Command, args []string) {
 	pb.RegisterAuthServiceServer(grpcServer, authHandler)
 	reflection.Register(grpcServer)
 
-	log.Infof("auth-service gRPC listening on :%s", cfg.Port)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.WithError(err).Fatal("gRPC server failed")
+	go func() {
+		log.Infof("auth-service gRPC listening on :%s", cfg.Port)
+		if err := grpcServer.Serve(lis); err != nil {
+			log.WithError(err).Fatal("gRPC server failed")
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Info("shutting down gracefully...")
+
+	stopped := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(stopped)
+	}()
+
+	select {
+	case <-stopped:
+		log.Info("gRPC server stopped gracefully")
+	case <-time.After(10 * time.Second):
+		grpcServer.Stop()
+		log.Warn("gRPC server force stopped after timeout")
 	}
+
+	log.Info("auth-service exited")
 }
