@@ -1,1 +1,9 @@
 go 1.26.1
+
+use (
+	./packages/cache
+	./packages/config
+	./packages/database
+	./packages/logger
+	./services/auth-service
+)
