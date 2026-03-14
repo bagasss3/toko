@@ -3,12 +3,13 @@ package token
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
 	"aidanwoods.dev/go-paseto"
 	"github.com/google/uuid"
+
+	"github.com/bagasss3/toko/services/auth-service/internal/model"
 )
 
 var (
@@ -17,8 +18,9 @@ var (
 )
 
 type Claims struct {
-	UserID    int64
+	UserID    uuid.UUID
 	Email     string
+	Role      model.Role
 	IssuedAt  time.Time
 	ExpiredAt time.Time
 }
@@ -40,10 +42,11 @@ func NewMaker(symmetricKey string) (*Maker, error) {
 	return &Maker{symmetricKey: key}, nil
 }
 
-func (m *Maker) CreateToken(userID int64, email string, duration time.Duration) (string, *Claims, error) {
+func (m *Maker) CreateToken(userID uuid.UUID, email string, role model.Role, duration time.Duration) (string, *Claims, error) {
 	claims := &Claims{
 		UserID:    userID,
 		Email:     email,
+		Role:      role,
 		IssuedAt:  time.Now(),
 		ExpiredAt: time.Now().Add(duration),
 	}
@@ -52,8 +55,9 @@ func (m *Maker) CreateToken(userID int64, email string, duration time.Duration) 
 	t.SetJti(uuid.New().String())
 	t.SetIssuedAt(claims.IssuedAt)
 	t.SetExpiration(claims.ExpiredAt)
-	t.SetString("user_id", strconv.FormatInt(userID, 10))
+	t.SetString("user_id", userID.String())
 	t.SetString("email", email)
+	t.SetString("role", string(role))
 
 	encrypted := t.V4Encrypt(m.symmetricKey, nil)
 	return encrypted, claims, nil
@@ -76,12 +80,17 @@ func (m *Maker) VerifyToken(tokenStr string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
 
 	email, err := t.GetString("email")
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	roleStr, err := t.GetString("role")
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
@@ -99,6 +108,7 @@ func (m *Maker) VerifyToken(tokenStr string) (*Claims, error) {
 	return &Claims{
 		UserID:    userID,
 		Email:     email,
+		Role:      model.Role(roleStr),
 		IssuedAt:  issuedAt,
 		ExpiredAt: expiredAt,
 	}, nil

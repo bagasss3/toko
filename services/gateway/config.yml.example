@@ -1,7 +1,7 @@
 port: 8080
 
 services:
-  auth_addr: "auth-service:9001"
+  auth_addr: "localhost:9001"
 
 server:
   read_timeout: 10s

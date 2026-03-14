@@ -4,6 +4,8 @@ use (
 	./packages/cache
 	./packages/config
 	./packages/database
+	./packages/errors
 	./packages/logger
 	./services/auth-service
+	./services/gateway
 )

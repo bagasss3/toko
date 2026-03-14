@@ -3,11 +3,48 @@ package auth;
 option go_package = "github.com/bagasss3/toko/services/auth-service/pb/auth";
 
 service AuthService {
-    rpc Login(LoginRequest)       returns (LoginResponse);
+    // Auth
+    rpc Login(LoginRequest) returns (LoginResponse);
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+    
+    // Admin
+    rpc CreateAdmin(CreateAdminRequest) returns (UserResponse);
+    
+    // Address
+    rpc GetMyAddresses(GetMyAddressesRequest) returns (AddressesResponse);
+    rpc GetAddressByID(GetAddressByIDRequest) returns (AddressResponse);
+    rpc CreateAddress(CreateAddressRequest) returns (AddressResponse);
+    rpc UpdateAddress(UpdateAddressRequest) returns (AddressResponse);
+    rpc DeleteAddress(DeleteAddressRequest) returns (DeleteAddressResponse);
+    rpc SetDefaultAddress(SetDefaultAddressRequest) returns (AddressResponse);
 }
 
+// Common messages
+message Address {
+    string id            = 1;
+    string user_id       = 2;
+    string receiver_name = 3;
+    string phone         = 4;
+    string address_line  = 5;
+    string city          = 6;
+    string province      = 7;
+    string postal_code   = 8;
+    bool   is_default    = 9;
+    string created_at    = 10;
+}
+
+message AddressInput {
+    string receiver_name = 1;
+    string phone         = 2;
+    string address_line  = 3;
+    string city          = 4;
+    string province      = 5;
+    string postal_code   = 6;
+    bool   is_default    = 7;
+}
+
+// Auth messages
 message LoginRequest {
     string email    = 1;
     string password = 2;
@@ -19,13 +56,19 @@ message LoginResponse {
 }
 
 message RegisterRequest {
-    string email    = 1;
-    string password = 2;
+    string name     = 1;
+    string email    = 2;
+    string password = 3;
+    string phone    = 4;
+    AddressInput address = 5;
 }
 
 message RegisterResponse {
-    int64  id    = 1;
-    string email = 2;
+    string id     = 1;
+    string name   = 2;
+    string email  = 3;
+    string role   = 4;
+    string phone  = 5;
 }
 
 message ValidateTokenRequest {
@@ -33,6 +76,69 @@ message ValidateTokenRequest {
 }
 
 message ValidateTokenResponse {
-    int64  user_id = 1;
+    string user_id = 1;
     string email   = 2;
+    string role    = 3;
+}
+
+// Admin messages
+message CreateAdminRequest {
+    string name     = 1;
+    string email    = 2;
+    string password = 3;
+    string phone    = 4;
+    string created_by = 5; // User ID of admin creating this account
+}
+
+message UserResponse {
+    string id     = 1;
+    string name   = 2;
+    string email  = 3;
+    string role   = 4;
+    string phone  = 5;
+    string created_at = 6;
+}
+
+// Address messages
+message GetMyAddressesRequest {
+    string user_id = 1;
+}
+
+message GetAddressByIDRequest {
+    string user_id    = 1;
+    string address_id = 2;
+}
+
+message CreateAddressRequest {
+    string user_id = 1;
+    AddressInput address = 2;
+}
+
+message UpdateAddressRequest {
+    string user_id    = 1;
+    string address_id = 2;
+    AddressInput address = 3;
+}
+
+message DeleteAddressRequest {
+    string user_id    = 1;
+    string address_id = 2;
+}
+
+message SetDefaultAddressRequest {
+    string user_id    = 1;
+    string address_id = 2;
+}
+
+message AddressesResponse {
+    repeated Address addresses = 1;
+}
+
+message AddressResponse {
+    Address address = 1;
+}
+
+message DeleteAddressResponse {
+    bool success = 1;
+    string message = 2;
 }

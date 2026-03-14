@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kumparan/cacher"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -33,8 +34,8 @@ func NewUserRepository(
 	}
 }
 
-func (r *userRepository) FindByID(ctx context.Context, id int64) (*model.User, error) {
-	key := fmt.Sprintf("user:id:%d", id)
+func (r *userRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	key := fmt.Sprintf("user:id:%s", id.String())
 
 	res, mu, err := r.cacheKeeper.GetOrLock(key)
 	if err != nil {
@@ -91,9 +92,22 @@ func (r *userRepository) Create(ctx context.Context, user *model.User) error {
 	return r.db.Conn.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepository) InvalidateUser(id int64, email string) {
+func (r *userRepository) CreateWithTx(ctx context.Context, tx *gorm.DB, user *model.User) error {
+	return tx.WithContext(ctx).Create(user).Error
+}
+
+func (r *userRepository) CountAdmins(ctx context.Context) (int64, error) {
+	var count int64
+	err := r.db.Conn.WithContext(ctx).
+		Model(&model.User{}).
+		Where("role = ?", model.RoleAdmin).
+		Count(&count).Error
+	return count, err
+}
+
+func (r *userRepository) InvalidateUser(id uuid.UUID, email string) {
 	keys := []string{
-		fmt.Sprintf("user:id:%d", id),
+		fmt.Sprintf("user:id:%s", id.String()),
 		fmt.Sprintf("user:email:%s", email),
 	}
 	if err := r.cacheKeeper.DeleteByKeys(keys); err != nil {
@@ -101,9 +115,9 @@ func (r *userRepository) InvalidateUser(id int64, email string) {
 	}
 }
 
-func (r *userRepository) findByIDFromDB(ctx context.Context, id int64) (*model.User, error) {
+func (r *userRepository) findByIDFromDB(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
-	err := r.db.Conn.WithContext(ctx).First(&user, id).Error
+	err := r.db.Conn.WithContext(ctx).First(&user, "id = ?", id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

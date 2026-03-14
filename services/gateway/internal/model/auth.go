@@ -1,7 +1,7 @@
 package model
 
 type TokenClaims struct {
-	UserID int64
+	UserID string
 	Email  string
 }
 
@@ -20,6 +20,6 @@ type LoginResponse struct {
 }
 
 type UserResponse struct {
-	UserID int64  `json:"user_id"`
+	UserID string `json:"user_id"`
 	Email  string `json:"email"`
 }

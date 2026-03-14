@@ -7,41 +7,24 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/bagasss3/toko/services/auth-service/internal/model"
+	apperrors "github.com/bagasss3/toko/packages/errors"
 	pb "github.com/bagasss3/toko/services/auth-service/pb/auth"
 )
 
-type AuthGRPCHandler struct {
-	pb.UnimplementedAuthServiceServer
-	authUsecase model.AuthUsecase
-}
-
-func NewAuthGRPCHandler(authUsecase model.AuthUsecase) *AuthGRPCHandler {
-	return &AuthGRPCHandler{authUsecase: authUsecase}
-}
 
 func (h *AuthGRPCHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResponse, error) {
 	tokens, err := h.authUsecase.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		log.WithError(err).Error("login failed")
-		return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
-	}
-
-	return &pb.LoginResponse{
-		AccessToken: tokens.AccessToken,
-	}, nil
-}
-
-func (h *AuthGRPCHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
-	user, err := h.authUsecase.Register(ctx, req.Email, req.Password)
-	if err != nil {
-		log.WithError(err).Error("register failed")
+		if err == apperrors.ErrInvalidCredentials {
+			return nil, status.Errorf(codes.Unauthenticated, "%s", err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "%s", err.Error())
 	}
 
-	return &pb.RegisterResponse{
-		Id:    user.ID,
-		Email: user.Email,
+	return &pb.LoginResponse{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
 	}, nil
 }
 
@@ -53,7 +36,8 @@ func (h *AuthGRPCHandler) ValidateToken(ctx context.Context, req *pb.ValidateTok
 	}
 
 	return &pb.ValidateTokenResponse{
-		UserId: claims.UserID,
+		UserId: claims.UserID.String(),
 		Email:  claims.Email,
+		Role:   string(claims.Role),
 	}, nil
 }

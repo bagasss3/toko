@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -65,9 +66,27 @@ func runServer(cmd *cobra.Command, args []string) {
 		log.WithError(err).Fatal("failed to create token maker")
 	}
 
+	// Initialize transactioner
+	transactioner := repository.NewGormTransactioner(db)
+
+	// Initialize repositories
 	userRepo := repository.NewUserRepository(db, keeper, cfg.RedisExpired)
+	addressRepo := repository.NewAddressRepository(db)
+
+	// Initialize usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, tokenMaker, cfg)
-	authHandler := grpchandler.NewAuthGRPCHandler(authUsecase)
+	userUsecase := usecase.NewUserUsecase(userRepo, addressRepo, transactioner)
+	addressUsecase := usecase.NewAddressUsecase(addressRepo, transactioner)
+
+	// Create first admin if none exists
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if err := userUsecase.CreateFirstAdmin(ctx); err != nil {
+		log.WithError(err).Warn("failed to create first admin")
+	}
+	cancel()
+
+	// Initialize handler with all usecases
+	authGRPCHandler := grpchandler.NewAuthGRPCHandler(authUsecase, userUsecase, addressUsecase)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Port))
 	if err != nil {
@@ -75,7 +94,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterAuthServiceServer(grpcServer, authHandler)
+	pb.RegisterAuthServiceServer(grpcServer, authGRPCHandler)
 	reflection.Register(grpcServer)
 
 	go func() {
