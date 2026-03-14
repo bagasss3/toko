@@ -1,0 +1,21 @@
+port: 8080
+database:
+  host: localhost
+  username: postgres
+  password: postgres
+  database: toko_auth
+  maxIdleConns: 3
+  maxOpenConns: 15
+  connMaxLifeTime: 30m
+  connMaxIdleTime: 10m
+  pingInterval: 10s
+  retryAttempts: 5
+redis:
+  host: localhost:6379
+  password: ""
+  db: 0
+  exp: 15m
+paseto:
+  key: "12345678901234567890123456789012"
+  access_token_duration: 15m
+  refresh_token_duration: 24h

@@ -3,12 +3,61 @@ module github.com/bagasss3/toko/services/auth-service
 go 1.26.1
 
 require (
+	github.com/bagasss3/toko/packages/cache v0.0.0-20260314012641-78d2d6fbef08
+	github.com/bagasss3/toko/packages/config v0.0.0-20260314012641-78d2d6fbef08
+	github.com/bagasss3/toko/packages/database v0.0.0-20260314012641-78d2d6fbef08
+	github.com/bagasss3/toko/packages/logger v0.0.0-20260314012641-78d2d6fbef08
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 )
 
 require (
+	github.com/aymerick/douceur v0.2.0 // indirect
+	github.com/cockroachdb/apd v1.1.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/getsentry/sentry-go v0.34.1 // indirect
+	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8 // indirect
+	github.com/go-redsync/redsync/v4 v4.13.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/gofrs/uuid/v5 v5.3.2 // indirect
+	github.com/gomodule/redigo v1.9.3 // indirect
+	github.com/goodsign/monday v1.0.2 // indirect
+	github.com/gorilla/css v1.0.1 // indirect
+	github.com/graph-gophers/graphql-go v1.6.0 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.6.0 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jpillora/backoff v1.0.0 // indirect
+	github.com/kumparan/cacher v1.20.0 // indirect
+	github.com/kumparan/go-utils v1.40.2 // indirect
+	github.com/kumparan/redsync/v4 v4.0.0-20220629071359-52de590a1465 // indirect
+	github.com/leekchan/accounting v1.0.0 // indirect
+	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
+	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/sagikazarmark/locafero v0.11.0 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
+	github.com/spf13/afero v1.15.0 // indirect
+	github.com/spf13/cast v1.10.0 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/viper v1.21.0 // indirect
+	github.com/subosito/gotenv v1.6.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	google.golang.org/grpc v1.74.2 // indirect
+	gorm.io/driver/postgres v1.6.0 // indirect
+	gorm.io/gorm v1.31.1 // indirect
 )
