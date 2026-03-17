@@ -21,15 +21,23 @@ func NewAuthHandler(authClient *client.AuthClient) *AuthHandler {
 func (h *AuthHandler) Login(c echo.Context) error {
 	var req model.LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return model.ErrorResponse{
+			Status:  http.StatusBadRequest,
+			Code:    model.ErrCodeInvalidRequest,
+			Message: "Invalid request body",
+		}
 	}
 	if err := c.Validate(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return model.ErrorResponse{
+			Status:  http.StatusUnprocessableEntity,
+			Code:    model.ErrCodeValidation,
+			Message: err.Error(),
+		}
 	}
 
 	accessToken, err := h.authClient.Login(c.Request().Context(), req.Email, req.Password)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
+		return err
 	}
 
 	return c.JSON(http.StatusOK, model.LoginResponse{
@@ -40,15 +48,23 @@ func (h *AuthHandler) Login(c echo.Context) error {
 func (h *AuthHandler) Register(c echo.Context) error {
 	var req model.RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return model.ErrorResponse{
+			Status:  http.StatusBadRequest,
+			Code:    model.ErrCodeInvalidRequest,
+			Message: "Invalid request body",
+		}
 	}
 	if err := c.Validate(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return model.ErrorResponse{
+			Status:  http.StatusUnprocessableEntity,
+			Code:    model.ErrCodeValidation,
+			Message: err.Error(),
+		}
 	}
 
 	claims, err := h.authClient.Register(c.Request().Context(), req.Email, req.Password)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		return err
 	}
 
 	return c.JSON(http.StatusCreated, model.UserResponse{

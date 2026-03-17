@@ -154,7 +154,7 @@ func (d *DB) recordMetrics() {
 
 func openDB(dsn string, cfg Config) (*gorm.DB, error) {
     db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-        NamingStrategy: schema.NamingStrategy{SingularTable: true},
+        NamingStrategy: schema.NamingStrategy{SingularTable: false},
     })
     if err != nil {
         return nil, fmt.Errorf("opening database: %w", err)

@@ -2,6 +2,8 @@ package console
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/bagasss3/toko/packages/database"
@@ -23,26 +25,26 @@ var migrateCmd = &cobra.Command{
 
 func init() {
 	migrateCmd.PersistentFlags().String("direction", "up", "migration direction: up or down")
+	migrateCmd.PersistentFlags().String("dir", "", "migration directory (default: ./db/migration relative to service)")
 	rootCmd.AddCommand(migrateCmd)
 }
 
 func runMigrate(cmd *cobra.Command, args []string) {
 	direction, _ := cmd.Flags().GetString("direction")
+	migrationDir, _ := cmd.Flags().GetString("dir")
 
 	log := logrus.New()
 	log.SetFormatter(&logrus.JSONFormatter{})
 
-	config.Init()
+	config.Init(".", "./services/auth-service")
 	cfg := svcconfig.Load()
 
-	// Set Goose dialect to PostgreSQL
 	if err := goose.SetDialect("postgres"); err != nil {
 		log.Fatalf("Failed to set Goose dialect: %v", err)
 	}
 
 	goose.SetTableName("schema_migrations")
 
-	// Initialize database using the shared package
 	db, err := database.Init(database.Config{
 		DSN:             fmt.Sprintf("postgresql://%s:%s@%s/%s", cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBName),
 		MaxIdleConns:    3,
@@ -57,13 +59,14 @@ func runMigrate(cmd *cobra.Command, args []string) {
 	}
 	defer db.Close()
 
-	// Get underlying *sql.DB from GORM
 	sqlDB, err := db.Conn.DB()
 	if err != nil {
 		log.Fatalf("Failed to get sql.DB: %v", err)
 	}
 
-	migrationDir := "./db/migration"
+	if migrationDir == "" {
+		migrationDir = getDefaultMigrationDir()
+	}
 
 	switch direction {
 	case "up":
@@ -79,4 +82,14 @@ func runMigrate(cmd *cobra.Command, args []string) {
 	}
 
 	log.Infof("Migrations applied successfully: %s", direction)
+}
+
+func getDefaultMigrationDir() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "./db/migration"
+	}
+
+	serviceRoot := filepath.Join(filepath.Dir(filename), "..", "..")
+	return filepath.Join(serviceRoot, "db", "migration")
 }

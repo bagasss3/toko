@@ -7,6 +7,7 @@ require (
 	github.com/bagasss3/toko/packages/cache v0.0.0-20260314012641-78d2d6fbef08
 	github.com/bagasss3/toko/packages/config v0.0.0-20260314012641-78d2d6fbef08
 	github.com/bagasss3/toko/packages/database v0.0.0-20260314012641-78d2d6fbef08
+	github.com/bagasss3/toko/packages/errors v0.0.0-20260314101420-6550b1000ac8
 	github.com/bagasss3/toko/packages/logger v0.0.0-20260314012641-78d2d6fbef08
 	github.com/google/uuid v1.6.0
 	github.com/kumparan/cacher v1.20.0

@@ -26,6 +26,7 @@ type Server struct {
 func NewServer(authClient *client.AuthClient) *Server {
 	e := echo.New()
 	e.Validator = &customValidator{validator: validator.New()}
+	e.HTTPErrorHandler = middleware.ErrorHandler()
 	e.Use(echomiddleware.Recover())
 	e.Use(echomiddleware.RequestID())
 

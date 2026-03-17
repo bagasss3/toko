@@ -35,7 +35,7 @@ var serverCmd = &cobra.Command{
 func runServer(cmd *cobra.Command, args []string) {
 	log := logger.NewEntry("auth-service")
 
-	pkgconfig.Init()
+	pkgconfig.Init(".", "./services/auth-service")
 	cfg := config.Load()
 
 	db, err := database.Init(database.Config{

@@ -28,7 +28,7 @@ var serverCmd = &cobra.Command{
 func runServer(cmd *cobra.Command, args []string) {
 	log := logger.NewEntry("gateway")
 
-	pkgconfig.Init()
+	pkgconfig.Init(".", "./services/gateway")
 	cfg := config.Load()
 
 	authClient, err := client.NewAuthClient(cfg.AuthServiceAddr)

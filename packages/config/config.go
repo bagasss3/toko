@@ -1,23 +1,35 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-func Init() {
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./..")
+func Init(paths ...string) {
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
+
+	for _, path := range paths {
+		viper.AddConfigPath(path)
+	}
+
 	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		logrus.Warnf("config file not found: %v", err)
 	}
 
-	logrus.Infof("using config file: %s", viper.ConfigFileUsed())
+	if viper.ConfigFileUsed() != "" {
+		logrus.Infof("using config file: %s", viper.ConfigFileUsed())
+	}
 }
 
 func GetString(key, fallback string) string {

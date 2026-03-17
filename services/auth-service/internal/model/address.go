@@ -9,7 +9,7 @@ import (
 )
 
 type Address struct {
-	ID           uuid.UUID `json:"id"`
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;default:uuid_generate_v4()"`
 	UserID       uuid.UUID `json:"user_id"`
 	ReceiverName string    `json:"receiver_name,omitempty"`
 	Phone        string    `json:"phone,omitempty"`

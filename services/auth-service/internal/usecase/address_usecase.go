@@ -45,6 +45,7 @@ func (u *addressUsecase) GetByID(ctx context.Context, userID, addressID uuid.UUI
 
 func (u *addressUsecase) Create(ctx context.Context, userID uuid.UUID, req model.AddressRequest) (*model.Address, error) {
 	address := &model.Address{
+		ID:           uuid.New(),
 		UserID:       userID,
 		ReceiverName: req.ReceiverName,
 		Phone:        req.Phone,
@@ -55,31 +56,21 @@ func (u *addressUsecase) Create(ctx context.Context, userID uuid.UUID, req model
 		IsDefault:    req.IsDefault,
 	}
 
-	// If this is the first address or is_default is true, handle default logic in transaction
-	if req.IsDefault {
+	switch {
+	case req.IsDefault:
 		tx := u.transactioner.Begin(ctx)
-		defer func() {
-			if r := recover(); r != nil {
-				u.transactioner.Rollback(tx)
-				panic(r)
-			}
-		}()
-
-		// Unset other defaults
 		addresses, err := u.addressRepo.FindByUserID(ctx, userID)
 		if err != nil {
 			u.transactioner.Rollback(tx)
 			return nil, fmt.Errorf("finding addresses: %w", err)
 		}
 
-		if len(addresses) > 0 {
-			for _, addr := range addresses {
-				if addr.IsDefault {
-					addr.IsDefault = false
-					if err := u.addressRepo.UpdateWithTx(ctx, tx, addr); err != nil {
-						u.transactioner.Rollback(tx)
-						return nil, fmt.Errorf("updating address: %w", err)
-					}
+		for _, addr := range addresses {
+			if addr.IsDefault {
+				addr.IsDefault = false
+				if err := u.addressRepo.UpdateWithTx(ctx, tx, addr); err != nil {
+					u.transactioner.Rollback(tx)
+					return nil, fmt.Errorf("updating address: %w", err)
 				}
 			}
 		}
@@ -92,7 +83,7 @@ func (u *addressUsecase) Create(ctx context.Context, userID uuid.UUID, req model
 		if err := u.transactioner.Commit(tx); err != nil {
 			return nil, fmt.Errorf("committing transaction: %w", err)
 		}
-	} else {
+	default:
 		if err := u.addressRepo.Create(ctx, address); err != nil {
 			return nil, fmt.Errorf("creating address: %w", err)
 		}
@@ -120,17 +111,9 @@ func (u *addressUsecase) Update(ctx context.Context, userID, addressID uuid.UUID
 	address.Province = req.Province
 	address.PostalCode = req.PostalCode
 
-	// Handle default change in transaction
-	if req.IsDefault && !address.IsDefault {
+	switch {
+	case req.IsDefault && !address.IsDefault:
 		tx := u.transactioner.Begin(ctx)
-		defer func() {
-			if r := recover(); r != nil {
-				u.transactioner.Rollback(tx)
-				panic(r)
-			}
-		}()
-
-		// Unset other defaults
 		addresses, err := u.addressRepo.FindByUserID(ctx, userID)
 		if err != nil {
 			u.transactioner.Rollback(tx)
@@ -156,7 +139,7 @@ func (u *addressUsecase) Update(ctx context.Context, userID, addressID uuid.UUID
 		if err := u.transactioner.Commit(tx); err != nil {
 			return nil, fmt.Errorf("committing transaction: %w", err)
 		}
-	} else {
+	default:
 		address.IsDefault = req.IsDefault
 		if err := u.addressRepo.Update(ctx, address); err != nil {
 			return nil, fmt.Errorf("updating address: %w", err)

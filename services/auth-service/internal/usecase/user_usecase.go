@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
 	apperrors "github.com/bagasss3/toko/packages/errors"
 	"github.com/bagasss3/toko/services/auth-service/internal/model"
@@ -33,7 +32,6 @@ func NewUserUsecase(
 }
 
 func (u *userUsecase) Register(ctx context.Context, req model.RegisterRequest) (*model.User, error) {
-	// Customers can only register as customers
 	if req.Role != "" && req.Role != model.RoleCustomer {
 		return nil, errors.New("invalid role for customer registration")
 	}
@@ -43,7 +41,6 @@ func (u *userUsecase) Register(ctx context.Context, req model.RegisterRequest) (
 }
 
 func (u *userUsecase) CreateAdmin(ctx context.Context, req model.RegisterRequest, createdBy uuid.UUID) (*model.User, error) {
-	// Verify creator is an admin
 	creator, err := u.userRepo.FindByID(ctx, createdBy)
 	if err != nil {
 		return nil, fmt.Errorf("finding creator: %w", err)
@@ -60,37 +57,21 @@ func (u *userUsecase) CreateAdmin(ctx context.Context, req model.RegisterRequest
 }
 
 func (u *userUsecase) createUserWithAddress(ctx context.Context, req model.RegisterRequest) (*model.User, error) {
-	// Start transaction
-	tx := u.transactioner.Begin(ctx)
-	defer func() {
-		if r := recover(); r != nil {
-			u.transactioner.Rollback(tx)
-			panic(r)
-		}
-	}()
-
-	// Check existing email using transaction
-	var existing *model.User
-	var err error
-	existing, err = u.findByEmailTx(ctx, tx, req.Email)
+	existing, err := u.userRepo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		u.transactioner.Rollback(tx)
 		return nil, fmt.Errorf("checking existing user: %w", err)
 	}
 	if existing != nil {
-		u.transactioner.Rollback(tx)
 		return nil, apperrors.ErrEmailExists
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		u.transactioner.Rollback(tx)
 		return nil, fmt.Errorf("hashing password: %w", err)
 	}
 
-	// Create user
 	user := &model.User{
+		ID:       uuid.New(),
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: string(hashed),
@@ -98,30 +79,35 @@ func (u *userUsecase) createUserWithAddress(ctx context.Context, req model.Regis
 		Phone:    req.Phone,
 	}
 
+	if req.Address == nil {
+		if err := u.userRepo.Create(ctx, user); err != nil {
+			return nil, fmt.Errorf("creating user: %w", err)
+		}
+		return user, nil
+	}
+
+	tx := u.transactioner.Begin(ctx)
 	if err := u.userRepo.CreateWithTx(ctx, tx, user); err != nil {
 		u.transactioner.Rollback(tx)
 		return nil, fmt.Errorf("creating user: %w", err)
 	}
 
-	// Create address if provided
-	if req.Address != nil {
-		address := &model.Address{
-			UserID:       user.ID,
-			ReceiverName: req.Address.ReceiverName,
-			Phone:        req.Address.Phone,
-			AddressLine:  req.Address.AddressLine,
-			City:         req.Address.City,
-			Province:     req.Address.Province,
-			PostalCode:   req.Address.PostalCode,
-			IsDefault:    req.Address.IsDefault,
-		}
-		if err := u.addressRepo.CreateWithTx(ctx, tx, address); err != nil {
-			u.transactioner.Rollback(tx)
-			return nil, fmt.Errorf("creating address: %w", err)
-		}
+	address := &model.Address{
+		ID:           uuid.New(),
+		UserID:       user.ID,
+		ReceiverName: req.Address.ReceiverName,
+		Phone:        req.Address.Phone,
+		AddressLine:  req.Address.AddressLine,
+		City:         req.Address.City,
+		Province:     req.Address.Province,
+		PostalCode:   req.Address.PostalCode,
+		IsDefault:    req.Address.IsDefault,
+	}
+	if err := u.addressRepo.CreateWithTx(ctx, tx, address); err != nil {
+		u.transactioner.Rollback(tx)
+		return nil, fmt.Errorf("creating address: %w", err)
 	}
 
-	// Commit transaction
 	if err := u.transactioner.Commit(tx); err != nil {
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
@@ -129,19 +115,7 @@ func (u *userUsecase) createUserWithAddress(ctx context.Context, req model.Regis
 	return user, nil
 }
 
-// Helper to find user by email within transaction
-func (u *userUsecase) findByEmailTx(ctx context.Context, tx *gorm.DB, email string) (*model.User, error) {
-	var user model.User
-	err := tx.WithContext(ctx).Where("email = ?", email).First(&user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	return &user, err
-}
-
-// CreateFirstAdmin creates the first admin account if no admins exist
 func (u *userUsecase) CreateFirstAdmin(ctx context.Context) error {
-	// Check if any admin exists
 	count, err := u.userRepo.CountAdmins(ctx)
 	if err != nil {
 		return fmt.Errorf("checking admin count: %w", err)
@@ -152,11 +126,10 @@ func (u *userUsecase) CreateFirstAdmin(ctx context.Context) error {
 		return nil
 	}
 
-	// Create default admin
 	req := model.RegisterRequest{
 		Name:     "Admin",
 		Email:    "admin@toko.com",
-		Password: "admin123", // Should be changed immediately after first login
+		Password: "admin123",
 		Role:     model.RoleAdmin,
 		Phone:    "",
 	}
